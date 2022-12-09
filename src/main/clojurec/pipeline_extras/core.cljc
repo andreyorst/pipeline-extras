@@ -1,8 +1,9 @@
 (ns pipeline-extras.core
   (:require
    [clojure.core.async
-    :refer [<! >! go put! chan close! go-loop to-chan!
-            #?@(:clj [>!! <!! thread])]]))
+    :refer
+    [#?@(:clj (>!! <!! thread))
+     <! >! chan close! go go-loop put! to-chan!]]))
 
 (defn- pipeline*
   ([n to xf from close? ex-handler type]
@@ -17,23 +18,15 @@
          jobs (chan n)
          results (chan n)
          finishes (and (= type :async) (chan n))
-         process #?(:clj (fn process [[v p :as job]]
-                           (if (nil? job)
-                             (do (close! results) nil)
-                             (let [res (chan 1 xf ex-handler)]
-                               (>!! res v)
-                               (close! res)
-                               (put! p res)
-                               true)))
-                    :cljs (fn process [[v p :as job]]
-                            (if (nil? job)
-                              (do (close! results) nil)
-                              (let [res (chan 1 xf ex-handler)]
-                                (go
-                                  (>! res v)
-                                  (close! res))
-                                (put! p res)
-                                true))))
+         process (fn process [[v p :as job]]
+                   (if (nil? job)
+                     (do (close! results) nil)
+                     (let [res (chan 1 xf ex-handler)]
+                       (#?(:clj do :cljs go)
+                        (#?(:clj >!! :cljs >!) res v)
+                        (close! res))
+                       (put! p res)
+                       true)))
          async (fn async [[v p :as job]]
                  (if (nil? job)
                    (do (close! results)
@@ -45,15 +38,11 @@
                      true)))]
      (dotimes [_ n]
        (case type
-         #?@(:clj [(:blocking :compute)
-                   (thread
-                     (let [job (<!! jobs)]
-                       (when (process job)
-                         (recur))))]
-             :cljs [:compute (go-loop []
-                               (let [job (<! jobs)]
-                                 (when (process job)
-                                   (recur))))])
+         #?(:clj (:blocking :compute) :cljs :compute)
+         (#?@(:clj (thread) :cljs (go-loop []))
+          (let [job (#?(:clj <!! :cljs <!) jobs)]
+            (when (process job)
+              (recur))))
          :async (go-loop []
                   (let [job (<! jobs)]
                     (when (async job)
@@ -129,27 +118,24 @@
                                      (.uncaughtException (Thread/currentThread) ex))
                                  nil)
                           :cljs nil))
-        process #?(:clj (fn [v p]
-                          (let [res (chan 1 xf ex-handler)]
-                            (>!! res v)
-                            (put! p (<!! res))
-                            (close! res)
-                            (close! p)))
-                   :cljs (fn [v p]
-                           (let [res (chan 1 xf ex-handler)]
-                             (go
-                               (>! res v)
-                               (put! p (<! res))
-                               (close! res)
-                               (close! p)))))]
+        process (fn [v p]
+                  (let [res (chan 1 xf ex-handler)]
+                    (#?(:cljs go :clj do)
+                     (#?(:cljs >! :clj >!!) res v)
+                     (close! res)
+                     (loop []
+                       (when-some [v (#?(:cljs <! :clj <!!) res)]
+                         (put! p v)
+                         (recur)))
+                     (close! p))))]
     (dotimes [_ n]
       (go-loop []
         (if-some [v (<! from)]
           (let [c (chan 1)]
             (case type
-              #?@(:clj [(:blocking :compute)
-                        (thread (process v c))]
-                  :cljs [:compute (go (process v c))])
+              #?@(:clj ((:blocking :compute)
+                         (thread (process v c)))
+                  :cljs (:compute (go (process v c))))
               :async (go (xf v c)))
             (when (loop []
                     (if-some [res (<! c)]
