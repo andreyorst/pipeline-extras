@@ -6,7 +6,8 @@
    :extra-deps {org.clojure/core.async {:mvn/version "1.6.673"}
                 org.clojure/clojurescript {:mvn/version "1.11.54"}}}
   :build
-  {:deps {io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}}
+  {:deps {io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}
+          slipset/deps-deploy {:mvn/version "0.2.0"}}
    :extra-deps {org.clojure/core.async {:mvn/version "1.6.673"}}
    :ns-default build}
   :test/kaocha

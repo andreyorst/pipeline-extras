@@ -25,3 +25,5 @@
 /checkouts
 /classes
 /target
+/pom.properties
+/pom.xml
