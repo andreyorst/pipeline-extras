@@ -12,20 +12,18 @@
 (defn clean [& _]
   (b/delete {:path "target"}))
 
-(defn pom [& _]
-  (b/write-pom {:target "./"
-                :lib lib
-                :version version
-                :basis basis
-                :src-dirs ["src/main/clojurec"]}))
+(defn- pom [opts]
+  (b/write-pom
+   (merge {:lib lib
+           :version version
+           :basis basis
+           :src-dirs ["src/main/clojurec"]
+           :scm {:url "https://github.com/andreyorst/pipeline-extras"}}
+          opts)))
 
 (defn jar [& _]
   (clean)
-  (b/write-pom {:class-dir class-dir
-                :lib lib
-                :version version
-                :basis basis
-                :src-dirs ["src/main/clojurec"]})
+  (pom {:class-dir class-dir})
   (b/copy-dir {:src-dirs ["src/main/clojurec"]
                :target-dir class-dir})
   (b/jar {:class-dir class-dir
@@ -42,7 +40,7 @@
 
 (defn deploy [& _]
   (jar)
-  (pom)
+  (pom {:target "./"})
   (d/deploy {:artifact jar-file
              :installer :remote
              :pom-file "pom.xml"

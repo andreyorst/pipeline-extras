@@ -1,5 +1,7 @@
 # pipeline-extras
 
+[![Clojars Project](https://img.shields.io/clojars/v/io.github.andreyorst/pipeline-extras.svg)](https://clojars.org/io.github.andreyorst/pipeline-extras)
+
 Fixed version of `pipeline*` (no off-by-two error in `pipeline-async` [ASYNC-163](https://clojure.atlassian.net/browse/ASYNC-163)), as well as unordered versions of all pipeline functions.
 Requires but doesn't include [clojure.core.async](https://github.com/clojure/core.async) as a dependency.
 Should work on both JVM Clojure and ClojureScript.

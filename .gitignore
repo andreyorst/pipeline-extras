@@ -27,3 +27,5 @@
 /target
 /pom.properties
 /pom.xml
+/pipeline-extras-*.pom
+/pipeline-extras-*.pom.asc
